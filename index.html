@@ -3487,6 +3487,62 @@ function glossaryHTML(){
         + '</tbody></table></div>';
 }
 function openGlossary(){ openPrintable(glossaryHTML(), 'Key words \u2014 ' + SITE.unitBanner, siteFile('key-words')); }
+/* ---------- no-device student workbook ---------- */
+function wbSheet(n){
+    var src = WORKSHEETS[n], o = (UNIT.workbook.lessons || {})[n] || {}; if (!src) return '';
+    var w = JSON.parse(JSON.stringify(src));
+    w.digital = false; w.teacher = false; w.collect = false; w.noIntent = true; w.noName = true; w.kind = 'Workbook';
+    w.after = { head: o.after || 'Write in this workbook' };
+    if (o.intro) w.intro = o.intro;
+    var bl = w.blocks.map(function(b, i){ return (o.replace && o.replace[i]) ? JSON.parse(JSON.stringify(o.replace[i])) : b; }), out = [];
+    bl.forEach(function(b, i){ out.push(b); if (o.insert && o.insert[i]) o.insert[i].forEach(function(x){ out.push(x); }); });
+    w.blocks = (o.before || []).concat(out);
+    var m = LESSON_META[n] || {}, l = lessonOf(n) || {};
+    var top = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#002066;margin:-.2rem 0 .45rem"><strong>Today’s lesson:</strong> ' + esc(l.t || '') + '</div>'
+        + (m.intent ? '<p class="wintent"><strong>What we are learning:</strong> ' + esc(m.intent) + '</p>' : '')
+        + ((m.criteria || []).length && !o.compact ? '<div style="font-size:9.6pt;margin:0 0 .55rem"><strong>Success criteria:</strong> ' + m.criteria.map(function(c){ return '<span style="white-space:nowrap">☐</span> ' + esc(c); }).join(' &nbsp; ') + '</div>' : '')
+        + '<div style="border:2px solid #c2410c;background:#fff7ed;border-radius:6px;padding:.45rem .8rem;margin:0 0 .6rem;font-size:9.8pt">'
+        +   '<div style="font-family:Arial,Helvetica,sans-serif;font-weight:bold;color:#c2410c;font-size:9.5pt;margin-bottom:.15rem">No device? Do this instead</div>'
+        +   '<ul style="margin:.1rem 0 0 1.1rem;padding:0">' + (o.swap || []).map(function(s){ return '<li style="margin:.1rem 0">' + s + '</li>'; }).join('') + '</ul>'
+        +   (BOOKWORK[n] && BOOKWORK[n].check ? '<div style="margin-top:.3rem;color:#15803d"><strong>In your exercise book today:</strong> ' + esc(BOOKWORK[n].check) + '</div>' : '')
+        + '</div>';
+    var h = sheetHTML(w, n).replace('<p class="wintro">', top + '<p class="wintro">');
+    if (o.cards && CARDS[o.cards]) h += PB + cardsHTML(o.cards).replace(/<p class="wintro">[\s\S]*?<\/p>/, '<p class="wintro">Read these cards to choose your example. Each card counts as one source.</p>');
+    (o.docs || []).forEach(function(id){ h += PB + docHTML(id); });
+    return h;
+}
+function workbookHTML(){
+    var WB = UNIT.workbook, kick = esc(siteKicker() + ' · ' + SITE.unitBanner);
+    var line = function(lab){ return '<div style="display:flex;gap:.6rem;align-items:flex-end;margin:.9rem 0;font-family:Arial,Helvetica,sans-serif;font-size:12pt"><span style="width:28mm">' + lab + '</span><span style="flex:1;border-bottom:1.5px solid #555;height:1.4rem"></span></div>'; };
+    var h = '<div class="wsheet" style="text-align:center;padding-top:30mm">'
+        + '<div class="wkicker" style="font-size:9pt">' + kick + '</div>'
+        + '<div style="font-family:Arial,Helvetica,sans-serif;font-size:11pt;letter-spacing:.2em;color:#c2410c;font-weight:bold;margin-top:18mm">STUDENT WORKBOOK</div>'
+        + '<h1 style="font-family:Arial,Helvetica,sans-serif;font-size:30pt;color:#002066;margin:.4rem 0 .3rem;line-height:1.1">' + esc(SITE.unitTitle) + '</h1>'
+        + '<div style="font-size:13pt;color:#333">' + esc(WB.sub) + '</div>'
+        + '<div style="font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#555;margin-top:.5rem">For students working without a device · Lessons 1–16 · homework · key words</div>'
+        + '<div style="text-align:left;max-width:130mm;margin:28mm auto 0">' + line('Name') + line('Class') + line('Teacher') + '</div></div>';
+    h += PB + '<div class="wsheet"><div class="whead"><div class="wkicker">' + tagx('📘 Workbook', '002066') + kick + '</div><h1>How to use this workbook</h1></div>'
+        + '<ul style="font-size:10.6pt;margin:0 0 1rem 1.1rem;padding:0">' + WB.how.map(function(x){ return '<li style="margin:.3rem 0">' + x + '</li>'; }).join('') + '</ul>'
+        + '<div class="wlab">What is in it</div><table class="wtab ptab"><thead><tr><th style="width:9%">Lesson</th><th style="width:38%">Lesson</th><th>Worksheet, and paper replacements for device work</th></tr></thead><tbody>'
+        + LESSONS.map(function(l){ var o = WB.lessons[l.n] || {}, x = [];
+              if (WORKSHEETS[l.n]) x.push(strip(WORKSHEETS[l.n].title));
+              if (l.n === 1) x.push('Waiheke group profiles'); if (l.n === 2) x.push('Council services fact page'); if (l.n === 6) x.push('backup article');
+              if (o.cards) x.push('case study cards'); if (o.docs) x.push('debate brief and fact sheets A–D');
+              return '<tr><td style="text-align:center">' + l.n + '</td><td>' + esc(l.t) + '</td><td>' + esc(x.join(' · ')) + '</td></tr>'; }).join('')
+        + '<tr><td></td><td>Homework</td><td>Weekly homework, pre-work quiz, flashcards</td></tr><tr><td></td><td>Key words</td><td>Every key word in the unit</td></tr>'
+        + '</tbody></table></div>';
+    LESSONS.forEach(function(l){ h += PB + wbSheet(l.n); });
+    h += PB + '<div class="wsheet"><div class="whead"><div class="wkicker">' + tagx('🏠 Homework', '15803d') + kick + '</div><h1>Homework</h1></div>'
+        + '<p class="wintro">All homework can be done without a device. Use the pages after this one for Weeks 1 and 2.</p>'
+        + HOMEWORK.filter(function(x){ return (x.tasks || []).length; }).map(function(x){
+              return '<div class="wb"><div class="wlab">Week ' + x.wk + ' — ' + esc(x.title) + ' (' + x.mins + ' min)</div><ul style="margin:.1rem 0 .2rem 1.1rem;padding:0;font-size:10pt">'
+                + (x.noDevice ? '<li><strong>No device:</strong> ' + esc(x.noDevice) + ' (the paper quiz is on the next page)</li>' : x.tasks.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join(''))
+                + '</ul>' + (x.wk >= 3 ? '<div class="wl"></div><div class="wl"></div><div class="wl"></div><div class="wl"></div>' : '') + '</div>'; }).join('')
+        + '</div>' + PB + docHTML('hw-prequiz') + PB + docHTML('hw-flashcards');
+    h += PB + glossaryHTML();
+    return h;
+}
+function openWorkbook(){ openPrintable(workbookHTML(), 'No-device workbook — ' + SITE.unitBanner, siteFile('no-device-workbook')); }
 function wordWallHTML(){
     var keys = Object.keys(GLOSSARY), h = '<div class="wsheet"><div class="whead"><div class="wkicker">' + tagx('\uD83D\uDD24 Word wall', '002066') + esc(siteKicker()) + '</div><h1>Word wall cards</h1></div>'
         + '<p class="wintro"><strong>Teacher:</strong> print, cut along the dashed lines and put the words up as each one is taught. The lesson number is in the corner.</p><table class="ctab"><tbody>';
@@ -3943,7 +3999,7 @@ function renderPrint(){
             + group('For you', [sbtn('openDebateScores()', '📝 Debate scoring sheets'), sbtn('openMarkSheet()', '📝 Marking sheet with rubric'), sbtn('openClassRecord()', '📋 Class record')]))
         + scard('<h2 class="s-h2">Whole unit</h2>'
             + '<div class="s-buttons">' + [sbtn('openAllWorksheets()', '📄 All worksheets'), sbtn('openAllWorksheets(\'key\')', '🔑 All worksheets with answers'), sbtn('openAllCards()', '✂️ All card sets'),
-                sbtn('openAllAnswerKeys()', '🔑 All answer keys'), sbtn('openUnitPlan()', '📕 Full unit plan'), sbtn('openGlossary()', '🔤 Key words list'), sbtn('openWordWall()', '🧱 Word wall cards')].join('') + '</div>'
+                sbtn('openAllAnswerKeys()', '🔑 All answer keys'), sbtn('openUnitPlan()', '📕 Full unit plan'), sbtn('openGlossary()', '🔤 Key words list'), sbtn('openWordWall()', '🧱 Word wall cards'), sbtn('openWorkbook()', '📘 No-device workbook')].join('') + '</div>'
             + '<details class="s-more" style="margin-top:1rem"><summary>Where the facts and figures come from</summary><ul class="s-links">'
             + DB_ROWS.map(function(r){ return '<li><strong>' + esc(r.fig) + '</strong> — ' + esc(r.what) + ' ' + (r.u ? '<a href="' + esc(r.u) + '" target="_blank" rel="noopener noreferrer">' + esc(r.src) + ' ↗</a>' : esc(r.src)) + '</li>'; }).join('')
             + '</ul></details>'
@@ -10805,7 +10861,261 @@ var UNIT = {
    "lic": "CC BY-SA 3.0",
    "page": "https://commons.wikimedia.org/wiki/File:Christchurch_polling_place_02.jpg"
   }
- ]
+ ],
+ "workbook": {
+  "title": "No-device workbook",
+  "sub": "Everything you need for the whole unit, on paper",
+  "how": [
+   "This workbook is for days when you do not have a device. It has every worksheet from the unit, plus paper versions of the device work.",
+   "Each lesson starts with a <strong>No device? Do this instead</strong> box. Read it first — it tells you what to use instead of a website or Google Doc.",
+   "Your <strong>exercise book</strong> is still for book work (copying notes, T-charts, graphs). The workbook is for the worksheet.",
+   "When the class turns in their Google Doc, you hand this workbook to your teacher, open at that lesson.",
+   "Bring coloured pencils: yellow, blue, green and red are used for highlighting.",
+   "Group work (Lessons 10–12): your group still has a shared Google Doc. Write your part here and give it to your group’s typist, or ask them to read the doc to you."
+  ],
+  "lessons": {
+   "1": {
+    "swap": [
+     "First half: book work, the same as everyone.",
+     "Second half: instead of the websites, read the <strong>five group profiles</strong> on the worksheet and choose one group.",
+     "Write your answers in the workbook. Hand it in at the end with the exit ticket filled in."
+    ],
+    "replace": {
+     "0": {
+      "t": "html",
+      "body": "<div class=\"wlab\">Five Waiheke groups — read these instead of the websites</div><table class=\"wtab ptab\"><tbody><tr><th class=\"wrow\" style=\"width:30%\">Waiheke Resources Trust</th><td>A community trust that runs <strong>food rescue</strong> (collecting good food that would be thrown away and sharing it with people who need it), looks after <strong>wetlands</strong>, and runs the <strong>Sustainability Centre</strong>, where people learn how to waste less.</td></tr><tr><th class=\"wrow\">Home Grown Waiheke Trust</th><td>Runs <strong>community gardens</strong> and the <strong>Surfdale Food Forest</strong>, where volunteers grow fruit and vegetables that the community can share, and people learn how to grow their own food.</td></tr><tr><th class=\"wrow\">Waiheke Marine Project</th><td>Works to <strong>care for the sea</strong> around the island so fish, shellfish and kelp can recover. It works together with <strong>Ngāti Pāoa</strong>, the iwi of the island.</td></tr><tr><th class=\"wrow\">Te Korowai o Waiheke</th><td>Works to <strong>bring native birds back</strong> to the island by <strong>removing pests</strong> such as stoats and rats that kill birds and eat their eggs. Volunteers help set and check traps.</td></tr><tr><th class=\"wrow\">Waiheke Volunteer Fire Brigade</th><td><strong>Volunteers</strong> — people who are not paid — who train to answer <strong>fire and emergency calls</strong> on the island, day and night.</td></tr></tbody></table><p class=\"whint\" style=\"margin-top:.3rem\">You can also choose a group someone at home or in class belongs to. Ask them the questions in Q1 and write their name as your source.</p>"
+     },
+     "1": {
+      "t": "table",
+      "q": 1,
+      "label": "Find out about your group.",
+      "head": [
+       "",
+       "What I found"
+      ],
+      "w": [
+       28,
+       72
+      ],
+      "rowHead": true,
+      "h": "2.3rem",
+      "body": [
+       [
+        "The group’s name",
+        ""
+       ],
+       [
+        "What it does",
+        ""
+       ],
+       [
+        "Who it helps",
+        ""
+       ],
+       [
+        "Where I found this (profile page, a person, or an article)",
+        ""
+       ]
+      ],
+      "ans": "A real group, what it actually does, who benefits (people, the sea, birds, young people…), and a named source. Check the “where I found this” row: it starts the habit the debate relies on."
+     }
+    },
+    "intro": "Choose <strong>one</strong> community group on Waiheke from the profiles below (or one someone you know belongs to). Find out what it does, then write a short paragraph about how it helps the community."
+   },
+   "2": {
+    "swap": [
+     "Use the <strong>council services fact page</strong> on the worksheet instead of the Auckland Council website.",
+     "Draw your mind map in the box.",
+     "In Q2, write “workbook fact page” where it asks where you found it."
+    ],
+    "before": [
+     {
+      "t": "html",
+      "body": "<div class=\"wlab\">Council services fact page — use this instead of the Auckland Council website</div><p style=\"font-size:10pt;margin:.2rem 0 .5rem\">Auckland Council runs local services for the whole Auckland region, and that includes Waiheke. The <strong>Waiheke Local Board</strong> is the part of the council that makes decisions about local things on the island, such as parks and halls. <strong>Central government</strong> (Parliament) runs national things such as schools, hospitals and the police — those are <em>not</em> council jobs.</p><table class=\"wtab ptab\"><thead><tr><th style=\"width:20%\">Group</th><th style=\"width:42%\">Services</th><th>What they are for</th></tr></thead><tbody><tr><th class=\"wrow\">Infrastructure (pipes and roads)</th><td>Drinking water, wastewater (sewage), stormwater (rain drains). Local roads, footpaths and street lights, looked after by Auckland Transport, which is part of the council family.</td><td>Keeping water clean and safe, stopping flooding, and letting people get around safely.</td></tr><tr><th class=\"wrow\">Recreation</th><td>Parks, playgrounds, sports fields, walking tracks and beach reserves.</td><td>Places for people to play, exercise and enjoy nature.</td></tr><tr><th class=\"wrow\">Waste</th><td>Rubbish collection, recycling, and collections of large unwanted items.</td><td>Keeping streets and beaches clean and sending less to the landfill.</td></tr><tr><th class=\"wrow\">Community</th><td>Libraries (Waiheke has a council library in Oneroa), community halls and centres, local events, and grants (money) for community groups.</td><td>Helping people learn, meet, and run clubs and events.</td></tr><tr><th class=\"wrow\">Other jobs</th><td>Dog registration and animal control, building consents (permission to build), noise control, pest control and planting, and Civil Defence for emergencies.</td><td>Keeping people safe and looking after the environment.</td></tr><tr><th class=\"wrow\">Working with iwi</th><td>The council works with <strong>mana whenua</strong>, the iwi with ancestral links to each area. On Waiheke this includes Ngāti Pāoa. An Independent Māori Statutory Board also helps the council make decisions.</td><td>Making sure Māori have a voice in decisions about their land, water and people.</td></tr></tbody></table><p class=\"whint\" style=\"margin-top:.3rem\">Source to write in Q2: “Workbook fact page (from Auckland Council information)”.</p>"
+     }
+    ],
+    "replace": {
+     "1": {
+      "t": "table",
+      "q": 2,
+      "label": "Four services the council provides, and where you found each one.",
+      "head": [
+       "Service",
+       "What it is for",
+       "Where I found it"
+      ],
+      "w": [
+       28,
+       44,
+       28
+      ],
+      "rows": 4,
+      "h": "1.9rem",
+      "ans": "Any four real council services, each with a purpose and a page. Watch for national services slipping in: schools, hospitals and police are central government."
+     }
+    },
+    "intro": "Use the council services fact page (above) to find out what the council does. Draw your mind map in the box below."
+   },
+   "3": {
+    "swap": [
+     "Write your answers in the workbook instead of the Google Doc. Work the percentages with the class.",
+     "The bar graph goes in your exercise book, the same as everyone."
+    ],
+    "after": "Write in this workbook"
+   },
+   "4": {
+    "swap": [
+     "Everything you need is printed here. Use coloured pencils: <strong>green</strong> for evidence for spending, <strong>red</strong> for evidence for saving.",
+     "Write your answers in the workbook."
+    ]
+   },
+   "5": {
+    "swap": [
+     "First 40 minutes: book work and the hot seat, the same as everyone.",
+     "Write your reflection in the workbook instead of the Google Doc."
+    ]
+   },
+   "6": {
+    "swap": [
+     "Use coloured pencils: <strong>yellow</strong> for facts, <strong>blue</strong> for opinions.",
+     "Q3: instead of finding an article online, use the <strong>backup article</strong> at the end of the sheet, or a newspaper article your teacher gives you."
+    ],
+    "replace": {
+     "3": {
+      "t": "q",
+      "q": 3,
+      "label": "On your own. Use the backup article at the end of this sheet, or a newspaper article your teacher gives you (the Gulf News is good). Copy a section of 5 to 8 sentences into the box, then colour facts yellow and opinions blue.",
+      "fields": [
+       "Article title, who wrote it, where it was printed, and date:",
+       "Copy the section here:"
+      ],
+      "flines": 4,
+      "ans": "A real, recent article with its source recorded, and a section where most sentences are highlighted. Check three or four of the student’s calls. The common slips: quotes highlighted as facts, numbers inside opinions (“a shocking 7.9%”) highlighted as facts."
+     }
+    }
+   },
+   "7": {
+    "swap": [
+     "No change — everyone works on paper today. Use the storyboard template, then glue it into your book or keep it here."
+    ]
+   },
+   "8": {
+    "swap": [
+     "First half: write your five questions in your book, the same as everyone.",
+     "Second half: your teacher or a partner types the prompt and your five questions on their device and reads you the reply. Write the AI’s ideas <strong>in your own words</strong>.",
+     "If that cannot happen, swap questions with a feedback partner. They answer the same prompt (how could these questions be clearer or deeper?) without rewriting them, and you fill in the record about their ideas.",
+     "AI statement: be honest. For example, “My teacher ran Gemini for me” or “I did not use AI — I got feedback from a partner”."
+    ],
+    "replace": {
+     "0": {
+      "t": "html",
+      "body": "<div class=\"wlab\">The prompt your teacher or partner types for you, with your five questions underneath</div><div style=\"font-family:Consolas,monospace;font-size:9.6pt;border:1.5px solid #4338ca;background:#eef2ff;padding:.5rem .7rem\">Here are 5 questions I want to ask the council about a closed skate park. Can you suggest how I could make these questions clearer or deeper? Do not rewrite them for me.</div>"
+     }
+    }
+   },
+   "9": {
+    "swap": [
+     "Use the <strong>case study cards</strong> after the worksheet as your sources (a card counts as a source).",
+     "Draw your three slides in the boxes instead of making them in Google Slides. You can present from the workbook."
+    ],
+    "intro": "Choose one New Zealand example of people bringing change from the case study cards. Plan it here, then draw your <strong>three slides</strong> in the boxes.",
+    "insert": {
+     "1": [
+      {
+       "t": "box",
+       "label": "Draw your three slides here (instead of Google Slides). Big title, a picture or symbol, and three or four words of notes.",
+       "h": "62mm",
+       "inner": "<div style=\"font:bold 9pt Arial;color:#4338ca;padding:4px 6px\">Slide 1 — The Issue</div>"
+      },
+      {
+       "t": "box",
+       "label": "",
+       "h": "62mm",
+       "inner": "<div style=\"font:bold 9pt Arial;color:#4338ca;padding:4px 6px\">Slide 2 — The Action Taken</div>"
+      },
+      {
+       "t": "box",
+       "label": "",
+       "h": "62mm",
+       "inner": "<div style=\"font:bold 9pt Arial;color:#4338ca;padding:4px 6px\">Slide 3 — The Change Made</div>"
+      }
+     ]
+    },
+    "cards": 9
+   },
+   "10": {
+    "swap": [
+     "First 20 minutes: book work, the same as everyone.",
+     "Your group’s plan is a shared Google Doc. Fill in your parts here and give them to your group’s typist, or ask them to read the doc to you.",
+     "Keep this copy — you need it next lesson."
+    ],
+    "after": "Your copy of the group plan"
+   },
+   "11": {
+    "swap": [
+     "Read the other group’s plan on a printed copy or on a group member’s screen.",
+     "Write your three comments in Q2, then copy them onto sticky notes and give them to that group."
+    ],
+    "replace": {
+     "1": {
+      "t": "q",
+      "q": 2,
+      "label": "Our three comments. Write them here, then copy each one onto a sticky note and give them to the other group.",
+      "fields": [
+       "I like…",
+       "I wonder…",
+       "I wonder…"
+      ],
+      "flines": 1,
+      "ans": "One “I like” that names something specific, and two “I wonder” comments that point at a real gap and suggest a fix: “I wonder who will check the bins on Friday?” “I wonder if you need the principal’s permission for the stall?” Vague comments (“good job”, “add more”) are not constructive."
+     }
+    }
+   },
+   "12": {
+    "swap": [
+     "Use the <strong>debate brief</strong> and the <strong>fact sheet for your moot</strong> (A, B, C or D) after the worksheet instead of searching online.",
+     "Your team still has a shared Google Doc. Write your parts here and give them to your team’s typist."
+    ],
+    "after": "Your copy of the team plan",
+    "docs": [
+     "debate-brief",
+     "facts-A",
+     "facts-B",
+     "facts-C",
+     "facts-D"
+    ]
+   },
+   "13": {
+    "swap": [
+     "Plan your speech here instead of in a Google Doc. You can speak from this page in your debate.",
+     "Fill in the AI statement word for word, even if you did not use AI.",
+     "You hand the workbook in in Lesson 16."
+    ],
+    "after": "Keep for your debate"
+   },
+   "14": {
+    "swap": [
+     "Adjudicating is on paper for everyone.",
+     "If you debate today, speak from your speech planner in Lesson 13 of this workbook."
+    ],
+    "compact": true
+   },
+   "15": {
+    "swap": [
+     "Adjudicating is on paper for everyone.",
+     "If you debate today, speak from your speech planner in Lesson 13 of this workbook."
+    ],
+    "compact": true
+   },
+   "16": {
+    "swap": [
+     "Write your reflection here instead of in the Google Doc.",
+     "Hand in the whole workbook: it has your speech planner, AI statement and reflection."
+    ],
+    "after": "Hand in with your speech planner"
+   }
+  }
+ }
 };
 </script>
 <script>
